@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DocChat — AI Document Assistant</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,'Inter',sans-serif;background:#0d1117;color:#e6edf3;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+
+  header{background:#161b22;border-bottom:1px solid #30363d;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+  .logo{font-size:20px;font-weight:700;color:#58a6ff;letter-spacing:-0.5px}
+  .logo span{color:#e6edf3}
+  .header-left{display:flex;align-items:center;gap:12px}
+  .badge{background:#21262d;border:1px solid #30363d;padding:3px 10px;border-radius:20px;font-size:12px;color:#8b949e}
+  .badge.on{border-color:#238636;color:#3fb950}
+  .header-right{display:flex;gap:8px}
+  .btn{padding:6px 14px;border-radius:6px;border:1px solid #30363d;background:#21262d;color:#e6edf3;cursor:pointer;font-size:13px;transition:all .15s}
+  .btn:hover{background:#30363d;border-color:#58a6ff}
+  .btn.danger{border-color:#30363d;color:#8b949e}
+  .btn.danger:hover{border-color:#da3633;color:#f85149;background:#da363315}
+
+  .main{display:flex;flex:1;overflow:hidden}
+
+  .left{width:300px;flex-shrink:0;background:#161b22;border-right:1px solid #30363d;display:flex;flex-direction:column;overflow:hidden}
+  .panel-hd{padding:12px 14px;font-size:11px;font-weight:600;color:#6e7681;text-transform:uppercase;letter-spacing:.8px;border-bottom:1px solid #21262d;flex-shrink:0}
+
+  .upload-wrap{padding:12px;flex-shrink:0}
+  .drop-zone{border:2px dashed #30363d;border-radius:8px;padding:18px 12px;text-align:center;cursor:pointer;transition:all .2s}
+  .drop-zone:hover,.drop-zone.over{border-color:#58a6ff;background:#1f6feb12}
+  .drop-icon{font-size:26px;margin-bottom:6px}
+  .drop-text{font-size:13px;color:#8b949e}.drop-text b{color:#58a6ff}
+  .drop-hint{font-size:11px;color:#6e7681;margin-top:4px}
+  #file-input{display:none}
+
+  .doc-scroll{flex:1;overflow-y:auto;padding:0 10px 10px}
+  .doc-label{font-size:11px;color:#6e7681;padding:6px 2px 4px}
+
+  .doc-card{background:#21262d;border:1px solid #30363d;border-radius:8px;padding:11px 12px;margin-bottom:7px;transition:border-color .15s}
+  .doc-card:hover{border-color:#388bfd40}
+  .dc-top{display:flex;align-items:flex-start;gap:8px}
+  .dc-name{font-size:13px;font-weight:500;flex:1;word-break:break-word;line-height:1.4}
+  .type-tag{font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;flex-shrink:0;margin-top:1px}
+  .type-tag.pdf{background:#da363325;color:#f85149;border:1px solid #da363345}
+  .type-tag.docx{background:#1f6feb25;color:#79c0ff;border:1px solid #1f6feb45}
+  .dc-meta{font-size:11px;color:#6e7681;margin:5px 0}
+  .dc-summary{font-size:12px;color:#8b949e;line-height:1.55;overflow:hidden;max-height:72px;transition:max-height .3s}
+  .dc-summary.open{max-height:500px}
+  .dc-actions{display:flex;gap:6px;margin-top:8px}
+  .mini-btn{font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid #30363d;background:transparent;color:#8b949e;cursor:pointer;transition:all .15s}
+  .mini-btn:hover{color:#e6edf3;border-color:#58a6ff}
+  .mini-btn.rm:hover{color:#f85149;border-color:#da3633}
+
+  .up-card{background:#21262d;border:1px solid #30363d;border-radius:8px;padding:13px 12px;margin-bottom:7px;display:flex;align-items:center;gap:10px}
+  .spin{width:15px;height:15px;border:2px solid #30363d;border-top-color:#58a6ff;border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  .right{flex:1;display:flex;flex-direction:column;overflow:hidden}
+  .chat-area{flex:1;overflow-y:auto;padding:20px 24px}
+
+  .empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#6e7681;text-align:center;gap:12px}
+  .empty-icon{font-size:52px;opacity:.4}
+  .empty h2{font-size:18px;color:#8b949e;font-weight:500}
+  .empty p{font-size:14px;line-height:1.7;max-width:280px}
+
+  .msg{display:flex;gap:12px;margin-bottom:20px}
+  .msg.user{flex-direction:row-reverse}
+  .av{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;margin-top:2px}
+  .av.user{background:#1f6feb}
+  .av.bot{background:#21262d;border:1px solid #30363d}
+  .msg-body{max-width:78%}
+  .bubble{padding:11px 15px;border-radius:12px;font-size:14px;line-height:1.65}
+  .msg.user .bubble{background:#1f6feb;color:#fff;border-bottom-right-radius:3px}
+  .msg.bot  .bubble{background:#21262d;border:1px solid #30363d;color:#e6edf3;border-bottom-left-radius:3px}
+  .ts{font-size:11px;color:#6e7681;margin-top:4px;padding:0 3px}
+  .msg.user .ts{text-align:right}
+
+  .dots{display:flex;gap:4px;align-items:center;padding:6px 0}
+  .dots span{width:6px;height:6px;background:#58a6ff;border-radius:50%;animation:dp 1.3s ease-in-out infinite}
+  .dots span:nth-child(2){animation-delay:.2s}
+  .dots span:nth-child(3){animation-delay:.4s}
+  @keyframes dp{0%,80%,100%{opacity:.3;transform:scale(.8)}40%{opacity:1;transform:scale(1)}}
+
+  .bubble strong{color:#79c0ff}
+  .bubble em{color:#d2a8ff}
+  .bubble code{background:#161b22;padding:2px 6px;border-radius:4px;font-family:monospace;font-size:12px;color:#ffa657}
+  .bubble ul,.bubble ol{padding-left:20px;margin:6px 0}
+  .bubble li{margin:3px 0}
+  .bubble h3,.bubble h4{color:#79c0ff;margin:8px 0 4px}
+
+  .input-area{padding:14px 20px;background:#161b22;border-top:1px solid #30363d;flex-shrink:0}
+  .input-row{display:flex;gap:10px;align-items:flex-end}
+  textarea.input{flex:1;background:#21262d;border:1px solid #30363d;border-radius:10px;padding:11px 15px;color:#e6edf3;font-size:14px;resize:none;min-height:46px;max-height:120px;outline:none;font-family:inherit;transition:border-color .2s;line-height:1.5}
+  textarea.input:focus{border-color:#58a6ff}
+  textarea.input::placeholder{color:#6e7681}
+  .send{width:46px;height:46px;background:#1f6feb;border:none;border-radius:10px;color:#fff;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s}
+  .send:hover{background:#388bfd}
+  .send:disabled{background:#21262d;cursor:not-allowed;color:#484f58}
+
+  .toast{position:fixed;bottom:76px;right:20px;background:#21262d;border:1px solid #30363d;border-radius:8px;padding:9px 14px;font-size:13px;color:#e6edf3;z-index:999;opacity:0;transition:opacity .25s;pointer-events:none}
+  .toast.show{opacity:1}
+  .toast.ok{border-color:#238636;color:#3fb950}
+  .toast.err{border-color:#da3633;color:#f85149}
+
+  ::-webkit-scrollbar{width:5px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:#30363d;border-radius:3px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <div class="logo">Doc<span>Chat</span></div>
+    <div class="badge" id="hbadge">⬤ Connecting…</div>
+    <div class="badge" id="dstat">0 / 10 docs</div>
+    <div style="font-size:16px;font-weight:600;color:#39ff14;font-style:italic;letter-spacing:0.3px;text-shadow:0 0 8px #39ff1470">👋 Hi Satya! Upload your docs — I'm here to summarize & answer anything.</div>
+  </div>
+  <div class="header-right">
+    <button class="btn" onclick="dlHistory()">⬇ Download Chat</button>
+    <button class="btn danger" onclick="clearAll()">✕ Clear All</button>
+  </div>
+</header>
+
+<div class="main">
+  <div class="left">
+    <div class="panel-hd">Documents</div>
+    <div class="upload-wrap">
+      <div class="drop-zone" id="dz" onclick="document.getElementById('file-input').click()">
+        <div class="drop-icon">📄</div>
+        <div class="drop-text"><b>Click to upload</b> or drag & drop</div>
+        <div class="drop-hint">PDF · DOCX &nbsp;·&nbsp; Up to 10 documents</div>
+      </div>
+      <input type="file" id="file-input" accept=".pdf,.docx" multiple onchange="handleFiles(this.files)">
+    </div>
+    <div class="doc-scroll" id="doc-list">
+      <div class="doc-label" id="dlabel" style="display:none"></div>
+    </div>
+  </div>
+
+  <div class="right">
+    <div class="chat-area" id="chat">
+      <div class="empty" id="empty">
+        <div class="empty-icon">🤖</div>
+        <h2>DocChat Assistant</h2>
+        <p>Upload your documents on the left, then ask me anything about them.</p>
+      </div>
+    </div>
+    <div class="input-area">
+      <div class="input-row">
+        <textarea class="input" id="qbox" placeholder="Ask a question about your documents… (Shift+Enter for new line)" rows="1"
+          onkeydown="onKey(event)" oninput="resize(this)"></textarea>
+        <button class="send" id="sendbtn" onclick="send()">➤</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API = 'http://localhost:8001';
+let docs  = {};
+
+async function checkHealth(){
+  try{
+    await fetch(API+'/health');
+    const b = document.getElementById('hbadge');
+    b.textContent = '⬤ Online'; b.className = 'badge on';
+  }catch{
+    document.getElementById('hbadge').textContent = '⬤ Offline';
+  }
+}
+checkHealth(); setInterval(checkHealth, 30000);
+
+const dz = document.getElementById('dz');
+dz.addEventListener('dragover', e=>{e.preventDefault(); dz.classList.add('over')});
+dz.addEventListener('dragleave', ()=>dz.classList.remove('over'));
+dz.addEventListener('drop', e=>{ e.preventDefault(); dz.classList.remove('over'); handleFiles(e.dataTransfer.files); });
+
+async function handleFiles(files){ for(const f of files) await uploadFile(f); }
+
+async function uploadFile(file){
+  const list = document.getElementById('doc-list');
+  const uid  = 'up'+Date.now();
+  const card = document.createElement('div');
+  card.className = 'up-card'; card.id = uid;
+  card.innerHTML = `<div class="spin"></div><span style="font-size:13px;color:#8b949e">Uploading ${esc(file.name)}…</span>`;
+  list.appendChild(card);
+  const form = new FormData(); form.append('file', file);
+  try{
+    const d = await fetch(API+'/upload',{method:'POST',body:form}).then(r=>r.json());
+    document.getElementById(uid)?.remove();
+    if(d.error){ toast(d.error,'err'); return; }
+    docs[d.doc_id] = d;
+    renderDoc(d); updateStat();
+    toast('✓ '+d.name+' uploaded','ok');
+    document.getElementById('empty').style.display = 'none';
+  }catch(e){
+    document.getElementById(uid)?.remove();
+    toast('Upload failed: '+e.message,'err');
+  }
+}
+
+function renderDoc(d){
+  const list = document.getElementById('doc-list');
+  document.getElementById('dlabel').style.display = 'block';
+  const card = document.createElement('div');
+  card.className = 'doc-card'; card.id = 'dc-'+d.doc_id;
+  const cls  = d.type.toLowerCase();
+  const meta = `${d.pages} page${d.pages!==1?'s':''} · ${(d.chars/1000).toFixed(1)}k chars · ${d.uploaded_at}`;
+  card.innerHTML = `
+    <div class="dc-top">
+      <div class="dc-name">${esc(d.name)}</div>
+      <span class="type-tag ${cls}">${d.type}</span>
+    </div>
+    <div class="dc-meta">${meta}</div>
+    <div class="dc-summary" id="sum-${d.doc_id}">${mdLight(d.summary)}</div>
+    <div class="dc-actions">
+      <button class="mini-btn" onclick="toggleSum('${d.doc_id}')">▾ Summary</button>
+      <button class="mini-btn rm" onclick="removeDoc('${d.doc_id}')">✕ Remove</button>
+    </div>`;
+  list.appendChild(card);
+  updateCount();
+}
+
+function toggleSum(id){ document.getElementById('sum-'+id).classList.toggle('open'); }
+
+async function removeDoc(id){
+  await fetch(API+'/docs/'+id,{method:'DELETE'});
+  document.getElementById('dc-'+id)?.remove();
+  delete docs[id];
+  updateStat(); updateCount();
+}
+
+function updateStat(){ document.getElementById('dstat').textContent = Object.keys(docs).length+' / 10 docs'; }
+function updateCount(){
+  const n = Object.keys(docs).length;
+  document.getElementById('dlabel').textContent = n ? n+' document'+(n>1?'s':'')+' loaded' : '';
+}
+
+async function send(){
+  const box = document.getElementById('qbox');
+  const q   = box.value.trim();
+  if(!q) return;
+  if(!Object.keys(docs).length){ toast('Upload a document first','err'); return; }
+  document.getElementById('empty').style.display = 'none';
+  addMsg('user', q);
+  box.value = ''; box.style.height = 'auto';
+  const typing = addTyping();
+  document.getElementById('sendbtn').disabled = true;
+  try{
+    const d = await fetch(API+'/ask',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({question:q})
+    }).then(r=>r.json());
+    typing.remove();
+    addMsg('bot', d.error ? '⚠️ '+d.error : d.answer);
+  }catch{
+    typing.remove();
+    addMsg('bot','⚠️ Could not reach server. Is doc_app.py running on port 8001?');
+  }
+  document.getElementById('sendbtn').disabled = false;
+  box.focus();
+}
+
+function addMsg(role, text){
+  const area = document.getElementById('chat');
+  const div  = document.createElement('div');
+  div.className = 'msg '+role;
+  const now  = new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  div.innerHTML = `
+    <div class="av ${role}">${role==='user'?'👤':'🤖'}</div>
+    <div class="msg-body">
+      <div class="bubble">${role==='bot'?mdFull(text):esc(text)}</div>
+      <div class="ts">${now}</div>
+    </div>`;
+  area.appendChild(div);
+  area.scrollTop = area.scrollHeight;
+  return div;
+}
+
+function addTyping(){
+  const area = document.getElementById('chat');
+  const div  = document.createElement('div');
+  div.className = 'msg bot';
+  div.innerHTML = `<div class="av bot">🤖</div><div class="msg-body"><div class="bubble"><div class="dots"><span></span><span></span><span></span></div></div></div>`;
+  area.appendChild(div); area.scrollTop = area.scrollHeight;
+  return div;
+}
+
+async function dlHistory(){
+  try{
+    const res  = await fetch(API+'/download');
+    const blob = await res.blob();
+    const a    = document.createElement('a');
+    a.href     = URL.createObjectURL(blob);
+    a.download = 'docchat-'+new Date().toISOString().slice(0,10)+'.docx';
+    a.click(); URL.revokeObjectURL(a.href);
+  }catch{ toast('Download failed','err'); }
+}
+
+async function clearAll(){
+  if(!confirm('Clear all documents and chat history?')) return;
+  await fetch(API+'/clear',{method:'DELETE'});
+  docs = {};
+  document.getElementById('doc-list').innerHTML = '<div class="doc-label" id="dlabel" style="display:none"></div>';
+  document.getElementById('chat').innerHTML = `
+    <div class="empty" id="empty">
+      <div class="empty-icon">🤖</div><h2>DocChat Assistant</h2>
+      <p>Upload your documents on the left, then ask me anything about them.</p>
+    </div>`;
+  updateStat(); toast('Cleared','ok');
+}
+
+function onKey(e){ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();} }
+function resize(el){ el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,120)+'px'; }
+function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function mdLight(t){
+  return esc(t).replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/^[-•]\s?/gm,'• ').replace(/\n/g,'<br>');
+}
+function mdFull(t){
+  return esc(t)
+    .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\*(.*?)\*/g,'<em>$1</em>')
+    .replace(/`(.*?)`/g,'<code>$1</code>')
+    .replace(/^### (.*$)/gm,'<h4 style="color:#79c0ff;margin:8px 0 4px">$1</h4>')
+    .replace(/^## (.*$)/gm,'<h3 style="color:#79c0ff;margin:10px 0 4px">$1</h3>')
+    .replace(/^[-•]\s(.*$)/gm,'<li>$1</li>')
+    .replace(/(<li>[\s\S]*?<\/li>)/g,'<ul>$1</ul>')
+    .replace(/\n\n/g,'<br><br>').replace(/\n/g,'<br>');
+}
+function toast(msg,type=''){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast show '+(type||'');
+  setTimeout(()=>t.className='toast',3000);
+}
+</script>
+</body>
+</html>
