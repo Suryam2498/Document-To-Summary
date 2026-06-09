@@ -61,7 +61,10 @@ def extract_docx(content: bytes) -> tuple[str, int]:
 # ── LLM helpers ───────────────────────────────────────────────────────────────
 def summarize(name: str, text: str) -> str:
     if groq_client is None:
-        raise RuntimeError("Missing GROQ_API_KEY environment variable.")
+        return (
+            "Summary unavailable because GROQ_API_KEY is not set on the backend. "
+            "Document upload is still successful."
+        )
 
     resp = groq_client.chat.completions.create(
         model=LLM_MODEL,
@@ -141,7 +144,12 @@ async def ask(req: AskRequest):
         return {"error": "No documents uploaded yet."}
 
     if groq_client is None:
-        return {"error": "Missing GROQ_API_KEY environment variable."}
+        return {
+            "error": (
+                "Backend is missing GROQ_API_KEY. Set this variable on your backend host "
+                "(for example Render/Railway/VM), then redeploy the backend."
+            )
+        }
 
     context   = build_context()
     doc_names = [d["name"] for d in doc_store.values()]
